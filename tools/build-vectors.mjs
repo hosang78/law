@@ -12,7 +12,7 @@ const API_ROOT = process.env.API_ROOT || "https://generativelanguage.googleapis.
 const KEY = (process.env.GEMINI_API_KEY || "").trim();
 const OUT = process.argv[2] || "web/vectors";
 const BUDGET_MS = Number(process.env.VECTOR_BUDGET_MIN || 15) * 60_000;
-const BATCH = 20;
+let batchSize = 16;          // 429가 나면 절반씩 줄인다
 const t0 = Date.now();
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const log = (...a) => console.log("[vectors]", ...a);
@@ -65,16 +65,19 @@ async function api(url, body) {
   }
 }
 let candidates = [];
+const rank = (m) => (/gemini-embedding/.test(m) ? 2 : 0) + (/preview|exp/i.test(m) ? 0 : 1);
 try {
   const r = await api("models?pageSize=200");
   if (r.ok) {
     const models = (await r.json()).models || [];
     candidates = models.filter((m) => /embed/i.test(m.name) && (m.supportedGenerationMethods || []).some((x) => /embed/i.test(x)))
       .map((m) => m.name.replace("models/", ""))
-      .sort((a, b) => (/gemini-embedding/.test(b) - /gemini-embedding/.test(a)) || b.localeCompare(a, "en", { numeric: true }));
+      // 정식(preview·exp 아닌) gemini-embedding 모델을 먼저: 무료 한도가 더 넉넉하다
+      .sort((a, b) => rank(b) - rank(a) || b.localeCompare(a, "en", { numeric: true }));
   } else log(`모델 목록 실패 (${r.status})`);
 } catch (e) { log("모델 목록 실패:", e.message); }
 candidates = [...new Set([prev.model, ...candidates, "gemini-embedding-001", "text-embedding-004"].filter(Boolean))];
+log("모델 후보:", candidates.join(", "));
 
 function normalize(v) { let n = 0; for (const x of v) n += x * x; n = Math.sqrt(n) || 1; return Float32Array.from(v, (x) => x / n); }
 
@@ -85,10 +88,10 @@ for (const model of candidates) {
   if (model === prev.model) keys.forEach((k) => prev.map.has(k) && vecs.set(k, prev.map.get(k)));
   const missing = keys.map((k, i) => i).filter((i) => !vecs.has(keys[i]));
   log(`${model}: 재사용 ${vecs.size}개, 새로 만들 것 ${missing.length}개`);
-  let stop = null, unusable = false;
+  let stop = null, unusable = false, fails = 0;
   for (let s = 0; s < missing.length && !stop; ) {
     if (Date.now() - t0 > BUDGET_MS) { stop = "시간 제한"; break; }
-    const batch = missing.slice(s, s + BATCH);
+    const batch = missing.slice(s, s + batchSize);
     const body = { requests: batch.map((i) => ({ model: `models/${model}`, content: { parts: [{ text: texts[i] }] }, ...(useTaskType ? { taskType: "RETRIEVAL_DOCUMENT" } : {}) })) };
     let r;
     try { r = await api(`models/${model}:batchEmbedContents`, body); } catch (e) { stop = "네트워크 오류: " + e.message; break; }
@@ -96,7 +99,8 @@ for (const model of candidates) {
       const out = (await r.json()).embeddings || [];
       if (out.length !== batch.length) { stop = "임베딩 개수가 맞지 않음"; break; }
       batch.forEach((i, j) => vecs.set(keys[i], normalize(out[j].values)));
-      s += BATCH;
+      s += batch.length;
+      fails = 0;
       log(`  ${vecs.size}/${keys.length}`);
       await sleep(300);
       continue;
@@ -104,6 +108,11 @@ for (const model of candidates) {
     let msg = ""; try { msg = (await r.json()).error?.message || ""; } catch {}
     if (r.status === 400 && useTaskType && /task/i.test(msg)) { useTaskType = false; continue; }
     if (r.status === 429 && !/limit:\s*0/.test(msg)) {
+      fails++;
+      if (fails === 1) log("  429:", msg.replace(/\s+/g, " ").slice(0, 300));
+      if (batchSize > 1) { batchSize = Math.max(1, Math.floor(batchSize / 2)); log(`  묶음 크기를 ${batchSize}개로 줄임`); }
+      if (fails >= 6 && vecs.size === (model === prev.model ? prev.map.size : 0)) { unusable = true; log("  계속 한도 초과 → 다음 모델로"); break; }
+      if (fails >= 10) { stop = "호출 한도 초과가 계속됨"; break; }
       const sec = parseFloat(msg.match(/retry in ([\d.]+)s/i)?.[1] || "30");
       if (sec <= 120) { log(`  호출 한도: ${Math.ceil(sec + 1)}초 대기`); await sleep((sec + 1) * 1000); continue; }
       stop = "하루 호출 한도 초과"; break;
