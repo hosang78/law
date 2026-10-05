@@ -653,7 +653,7 @@ const Q_PARTICLE = /(?:에서는|에서|으로|에게|까지|부터|라고|이�
 const Q_STOP = new Set(["얼마", "어떻게", "무엇", "뭐", "알려줘", "알려주세요", "뭐야", "있나요", "하나요", "되나요", "인가요", "나요", "내야", "경우",
   "내용", "대해", "대한", "관련", "설명", "해줘", "어때", "언제", "누가", "어디", "어떤", "무슨", "몇", "규정", "조문"]);
 function queryBigrams(q) {
-  const t = q.replace(/제\s*\d+\s*조(?:\s*의\s*\d+)?/g, " ").replace(/제\s*\d+\s*[항호장절]/g, " ");
+  const t = q.replace(/(?:제\s*)?(?<![\d.])\d+\s*조(?!원)(?:\s*의\s*\d+)?/g, " ").replace(/제\s*\d+\s*[항호장절]/g, " ");
   const out = [];
   for (const w0 of t.split(/\s+/)) {
     let w = normTxt(w0);
@@ -827,7 +827,7 @@ async function vectorRank(q, allow) {
 
 const NEGO_Q = /협상|요령|제안서|제안요청|협상적격|평가위원|기술평가|가격평가/;
 function forcedHits(q, scope) {
-  const arts = [], re = /제\s*(\d+)\s*조(?:\s*의\s*(\d+))?/g;
+  const arts = [], re = /(?:제\s*)?(?<![\d.])(\d+)\s*조(?!원)(?:\s*의\s*(\d+))?/g;   // "제7조"뿐 아니라 "7조"(말로 물을 때 흔함)도 조문 번호로 인식
   let m;
   while ((m = re.exec(q))) arts.push(m[1] + (m[2] ? "-" + m[2] : ""));
   if (!arts.length) return [];
