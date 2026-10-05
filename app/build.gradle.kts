@@ -14,8 +14,8 @@ android {
         applicationId = "io.github.hosang78.suhyupcontract"
         minSdk = 26
         targetSdk = 36
-        versionCode = 3
-        versionName = "1.2"
+        versionCode = 4
+        versionName = "1.3"
     }
 
     signingConfigs {
@@ -105,6 +105,14 @@ code{background:#fff;padding:2px 6px;border-radius:4px}</style></head><body>
             logger.warn("w: HTML의 API 키 자리(__GEMINI_API_KEY__)가 채워지지 않았습니다. GEMINI_API_KEY를 설정하세요.")
         }
         target.writeText(html, Charsets.UTF_8)
+
+        // 미리 만든 규정 색인 (tools/build-vectors.mjs 결과, 없으면 앱이 첫 실행 때 직접 만듦)
+        val vec = webDir.asFileTree.files.filter { it.parentFile?.name == "vectors" && it.name in setOf("meta.json", "vectors.bin") }
+        if (vec.size == 2) {
+            val dir = File(out, "vectors").apply { mkdirs() }
+            vec.forEach { it.copyTo(File(dir, it.name), overwrite = true) }
+            logger.lifecycle("web/vectors → assets/vectors (미리 만든 색인 포함)")
+        }
         logger.lifecycle("web/${src.name} → assets/chatbot.html" + if (key.isNotBlank()) " (API 키 주입)" else "")
     }
 }

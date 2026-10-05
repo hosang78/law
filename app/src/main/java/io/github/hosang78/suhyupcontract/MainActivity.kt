@@ -97,7 +97,8 @@ class MainActivity : ComponentActivity() {
 
     @SuppressLint("SetJavaScriptEnabled", "JavascriptInterface")
     private fun setupWebView() {
-        val shim = assets.open(SHIM_FILE).bufferedReader().use { it.readText() }
+        // 페이지보다 먼저 실행할 스크립트들 (음성 shim, 미리 만든 색인 넣기)
+        val shim = INJECT_FILES.joinToString("\n;\n") { f -> assets.open(f).bufferedReader().use { it.readText() } }
         val startScript = WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)
 
         webView.settings.apply {
@@ -167,11 +168,11 @@ class MainActivity : ComponentActivity() {
     private fun appVersion(): String =
         try { packageManager.getPackageInfo(packageName, 0).versionName ?: "?" } catch (e: Exception) { "?" }
 
-    /** DOCUMENT_START_SCRIPT를 못 쓰는 오래된 WebView용: HTML <head> 맨 앞에 shim <script>를 끼워 넣는다 */
+    /** DOCUMENT_START_SCRIPT를 못 쓰는 오래된 WebView용: HTML <head> 맨 앞에 주입 스크립트 <script>를 끼워 넣는다 */
     private fun injectShimTag(res: WebResourceResponse?): WebResourceResponse? {
         val data = res?.data ?: return res
         val html = data.bufferedReader(Charsets.UTF_8).use { it.readText() }
-        val tag = "<script src=\"/assets/$SHIM_FILE\"></script>"
+        val tag = INJECT_FILES.joinToString("") { "<script src=\"/assets/$it\"></script>" }
         val m = Regex("<head[^>]*>", RegexOption.IGNORE_CASE).find(html)
         val out = if (m != null) html.replaceRange(m.range.last + 1, m.range.last + 1, tag) else tag + html
         return WebResourceResponse("text/html", "utf-8", ByteArrayInputStream(out.toByteArray(Charsets.UTF_8)))
@@ -213,6 +214,6 @@ class MainActivity : ComponentActivity() {
         private const val DOMAIN = "appassets.androidplatform.net"   // WebViewAssetLoader.DEFAULT_DOMAIN
         private const val ORIGIN = "https://$DOMAIN"
         private const val START_URL = "$ORIGIN/assets/chatbot.html"
-        private const val SHIM_FILE = "speech-shim.js"
+        private val INJECT_FILES = listOf("speech-shim.js", "vector-preload.js")
     }
 }

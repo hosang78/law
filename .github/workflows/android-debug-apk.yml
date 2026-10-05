@@ -35,6 +35,22 @@ jobs:
             exit 1
           fi
 
+      - name: 규정 색인 캐시 복원
+        uses: actions/cache@v4
+        with:
+          path: web/vectors
+          key: vectors-${{ hashFiles('web/*.html') }}-${{ github.run_id }}
+          restore-keys: |
+            vectors-${{ hashFiles('web/*.html') }}-
+            vectors-
+
+      - name: 규정 색인(벡터) 미리 만들기
+        continue-on-error: true
+        timeout-minutes: 20
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: node tools/build-vectors.mjs web/vectors
+
       - name: debug APK 빌드
         env:
           # 저장소 Secret GEMINI_API_KEY 를 HTML의 API_KEY 자리에 넣는다 (저장소에는 키가 남지 않음)
