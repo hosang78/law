@@ -1,0 +1,42 @@
+name: Android debug APK
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: 챗봇 HTML 확인
+        run: |
+          if ls web/*.html >/dev/null 2>&1; then
+            echo "HTML: $(ls web/*.html)"
+          else
+            echo "::warning::web/chatbot.html 이 없어 안내 화면만 들어간 APK가 만들어집니다."
+          fi
+
+      - name: debug APK 빌드
+        env:
+          # API 키는 비공개 저장소일 때만 넣는다 (공개 저장소의 아티팩트는 누구나 내려받을 수 있음)
+          GEMINI_API_KEY: ${{ github.event.repository.private && secrets.GEMINI_API_KEY || '' }}
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleDebug
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: suhyup-contract-helper-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 14

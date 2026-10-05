@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 밝은 테마: WebView의 prefers-color-scheme도 이 테마를 따라감 -->
+    <style name="Theme.SuhyupContract" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/window_background</item>
+        <item name="android:colorAccent">@color/ic_launcher_background</item>
+    </style>
+</resources>
