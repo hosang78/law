@@ -12,6 +12,16 @@
   var N = window.AndroidSpeech;
   if (!N) return;
 
+  /* 앱 WebView 표시("; wv)")가 남아 있으면 페이지가 '카카오톡 같은 앱 안 브라우저'로 판단해 마이크를 막는다.
+     앱이 User-Agent에서 이미 지우지만, 혹시 남아 있어도 페이지에는 지운 값이 보이게 한다. */
+  try {
+    var ua = navigator.userAgent;
+    if (/wv\)/i.test(ua)) {
+      var clean = ua.replace(/;\s*wv\)/i, ")").replace(/wv\)/i, ")");
+      Object.defineProperty(navigator, "userAgent", { get: function () { return clean; }, configurable: true });
+    }
+  } catch (e) {}
+
   /* ---------- 이벤트 도우미 (on<type> 속성 + addEventListener) ---------- */
   function Emitter() {}
   Emitter.prototype.addEventListener = function (type, fn) {

@@ -108,7 +108,7 @@ class MainActivity : ComponentActivity() {
             allowContentAccess = false
             setSupportMultipleWindows(false)
             // 기본 UA의 "; wv" 표시가 있으면 페이지가 '앱 안 브라우저'로 판단해 마이크를 막으므로 제거
-            userAgentString = userAgentString.replace("; wv)", ")") + " SuhyupContractHelper/1.0"
+            userAgentString = userAgentString.replace("; wv)", ")") + " SuhyupContractHelper/" + appVersion()
         }
         webView.addJavascriptInterface(speech, "AndroidSpeech")
 
@@ -163,6 +163,9 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    private fun appVersion(): String =
+        try { packageManager.getPackageInfo(packageName, 0).versionName ?: "?" } catch (e: Exception) { "?" }
 
     /** DOCUMENT_START_SCRIPT를 못 쓰는 오래된 WebView용: HTML <head> 맨 앞에 shim <script>를 끼워 넣는다 */
     private fun injectShimTag(res: WebResourceResponse?): WebResourceResponse? {

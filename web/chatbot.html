@@ -884,7 +884,13 @@ async function retrieve(q, prevQ, scope) {
   const picked = [], seen = new Set();
   for (const c of forced) if (!seen.has(c.id)) { seen.add(c.id); picked.push(c); }
   for (const id of ranked) { if (picked.length >= cap) break; if (!seen.has(id)) { seen.add(id); picked.push(CH[id]); } }
-  return { hits: picked, mode: vr.length ? "의미+단어" : "단어" };
+  // 긴 조문이 여러 조각으로 나뉜 경우, 한 조각만 걸려도 같은 조문의 나머지 조각을 함께 넘김 (예: 제51조 제1항 누락 방지)
+  const hits = [], got = new Set();
+  for (const c of picked) {
+    const sibs = c.part ? ART.get(artKey(c)).chunks : [c];
+    for (const x of sibs) if (!got.has(x.id)) { got.add(x.id); hits.push(x); }
+  }
+  return { hits: hits.slice(0, cap + 4), mode: vr.length ? "의미+단어" : "단어" };
 }
 
 function contextOf(hits, q) {
