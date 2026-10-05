@@ -69,8 +69,9 @@ class SpeechBridge(
     fun stopRecognition(id: String) {
         main.post {
             if (recId == id) recognizer?.stopListening()
-            else if (waitingId == id) {
-                waitingId = null
+            else {
+                // 아직 시작 전(권한 대기 등)이거나 이미 끝난 세션: JS가 멈춰 있지 않도록 end를 보낸다
+                if (waitingId == id) waitingId = null
                 srEvent(id, "end")
             }
         }
@@ -410,7 +411,7 @@ class SpeechBridge(
 
     /** 앱이 화면에서 사라지면 마이크를 놓는다 (읽어주기는 계속). */
     fun onPause() {
-        waitingId = null
+        // waitingId는 건드리지 않는다: 마이크 권한 창이 뜰 때도 onPause가 불리기 때문
         recId?.let { id ->
             recId = null
             releaseRecognizer(cancel = true)

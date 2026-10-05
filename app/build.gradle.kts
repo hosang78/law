@@ -101,6 +101,9 @@ code{background:#fff;padding:2px 6px;border-radius:4px}</style></head><body>
             if (m != null) html = html.replaceRange(m.range, m.groupValues[1] + "\"" + key + "\"")
             else logger.warn("w: HTML에서 `const API_KEY = \"...\"` 줄을 찾지 못해 키를 넣지 않았습니다.")
         }
+        if (html.contains("__GEMINI_API_KEY__")) {
+            logger.warn("w: HTML의 API 키 자리(__GEMINI_API_KEY__)가 채워지지 않았습니다. GEMINI_API_KEY를 설정하세요.")
+        }
         target.writeText(html, Charsets.UTF_8)
         logger.lifecycle("web/${src.name} → assets/chatbot.html" + if (key.isNotBlank()) " (API 키 주입)" else "")
     }

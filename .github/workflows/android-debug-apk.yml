@@ -26,6 +26,15 @@ jobs:
             echo "::warning::web/chatbot.html 이 없어 안내 화면만 들어간 APK가 만들어집니다."
           fi
 
+      - name: API 키 확인
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          if grep -q "__GEMINI_API_KEY__" web/*.html 2>/dev/null && [ -z "$GEMINI_API_KEY" ]; then
+            echo "::error::HTML의 API 키 자리가 비어 있는데 GEMINI_API_KEY Secret이 없습니다. Settings > Secrets and variables > Actions 에서 등록한 뒤 다시 실행하세요."
+            exit 1
+          fi
+
       - name: debug APK 빌드
         env:
           # 저장소 Secret GEMINI_API_KEY 를 HTML의 API_KEY 자리에 넣는다 (저장소에는 키가 남지 않음)
