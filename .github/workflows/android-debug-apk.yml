@@ -28,8 +28,8 @@ jobs:
 
       - name: debug APK 빌드
         env:
-          # API 키는 비공개 저장소일 때만 넣는다 (공개 저장소의 아티팩트는 누구나 내려받을 수 있음)
-          GEMINI_API_KEY: ${{ github.event.repository.private && secrets.GEMINI_API_KEY || '' }}
+          # 저장소 Secret GEMINI_API_KEY 를 HTML의 API_KEY 자리에 넣는다 (저장소에는 키가 남지 않음)
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           chmod +x gradlew
           ./gradlew --no-daemon assembleDebug
@@ -39,4 +39,4 @@ jobs:
           name: suhyup-contract-helper-debug-apk
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 3

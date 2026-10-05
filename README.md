@@ -27,7 +27,7 @@ keystore/debug.keystore         ← 고정 디버그 서명 키 (Studio/Actions 
    - GitHub Actions: 저장소 Settings → Secrets and variables → Actions → `GEMINI_API_KEY` 등록
 
    빌드할 때 `const API_KEY = "..."` 부분이 그 키로 바뀌어 APK에 들어갑니다.
-   (워크플로는 **비공개 저장소일 때만** Secret 키를 넣습니다. 공개 저장소의 APK 아티팩트는 누구나 받을 수 있기 때문입니다.)
+   (공개 저장소라면 APK 아티팩트에는 키가 들어 있으니, 내려받은 뒤 Actions 실행 기록을 지워도 됩니다. 아티팩트는 3일 뒤 자동 삭제됩니다.)
 
 `web/`에 HTML이 없으면 "챗봇 HTML이 들어 있지 않아요" 안내 화면만 든 APK가 만들어집니다.
 
